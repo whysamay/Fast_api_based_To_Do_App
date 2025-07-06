@@ -35,9 +35,33 @@ class CreateUserRequest(BaseModel):
     phone_number: str
 
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    phone_number: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    first_name: str
+    last_name: str
+    role: str
+    phone_number: str
+    is_active: bool
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
 
 
 def get_db():
@@ -116,3 +140,97 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     token = create_access_token(user.username, user.id, user.role, timedelta(minutes=20))
 
     return {'access_token': token, 'token_type': 'bearer'}
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register_user(db: db_dependency, register_request: RegisterRequest):
+    # Check if user already exists
+    existing_user = db.query(Users).filter(
+        (Users.email == register_request.email) | 
+        (Users.username == register_request.email.split('@')[0])
+    ).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    # Split full name into first and last name
+    name_parts = register_request.full_name.split(' ', 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+    
+    # Create username from email
+    username = register_request.email.split('@')[0]
+    
+    # Create user
+    create_user_model = Users(
+        email=register_request.email,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        role="user",  # Default role
+        hashed_password=bcrypt_context.hash(register_request.password),
+        is_active=True,
+        phone_number=register_request.phone_number
+    )
+
+    db.add(create_user_model)
+    db.commit()
+    db.refresh(create_user_model)
+    
+    # Create token
+    token = create_access_token(
+        create_user_model.username, 
+        create_user_model.id, 
+        create_user_model.role, 
+        timedelta(minutes=20)
+    )
+    
+    return {
+        'access_token': token, 
+        'token_type': 'bearer',
+        'user': create_user_model
+    }
+
+
+@router.post("/login", response_model=TokenResponse)
+async def login_user(db: db_dependency, login_data: dict):
+    email = login_data.get('email')
+    password = login_data.get('password')
+    
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password are required"
+        )
+    
+    # Find user by email
+    user = db.query(Users).filter(Users.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    
+    # Verify password
+    if not bcrypt_context.verify(password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    
+    # Create token
+    token = create_access_token(
+        user.username, 
+        user.id, 
+        user.role, 
+        timedelta(minutes=20)
+    )
+    
+    return {
+        'access_token': token, 
+        'token_type': 'bearer',
+        'user': user
+    }

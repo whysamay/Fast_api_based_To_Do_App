@@ -34,6 +34,23 @@ class UserVerification(BaseModel):
     new_password: str = Field(min_length=6)
 
 
+class UserProfileUpdate(BaseModel):
+    first_name: str = None
+    last_name: str = None
+    phone_number: str = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    first_name: str
+    last_name: str
+    role: str
+    phone_number: str
+    is_active: bool
+
+
 @router.get('/', status_code=status.HTTP_200_OK)
 async def get_user(user: user_dependency, db: db_dependency):
     if user is None:
@@ -66,3 +83,33 @@ async def change_phone_number(user: user_dependency, db: db_dependency,
     user_model.phone_number = phone_number
     db.add(user_model)
     db.commit()
+
+
+@router.get('/me', status_code=status.HTTP_200_OK)
+async def get_current_user_profile(user: user_dependency, db: db_dependency):
+    if user is None:
+        raise HTTPException(status_code=401, detail='authentication failed')
+    return db.query(Users).filter(Users.id == user.get('id')).first()
+
+
+@router.put('/me', status_code=status.HTTP_200_OK, response_model=UserResponse)
+async def update_user_profile(user: user_dependency, db: db_dependency,
+                              profile_update: UserProfileUpdate):
+    if user is None:
+        raise HTTPException(status_code=401, detail='authentication failed')
+    
+    user_model = db.query(Users).filter(Users.id == user.get('id')).first()
+    
+    # Update only the fields that are provided
+    if profile_update.first_name is not None:
+        user_model.first_name = profile_update.first_name
+    if profile_update.last_name is not None:
+        user_model.last_name = profile_update.last_name
+    if profile_update.phone_number is not None:
+        user_model.phone_number = profile_update.phone_number
+    
+    db.add(user_model)
+    db.commit()
+    db.refresh(user_model)
+    
+    return user_model

@@ -33,6 +33,15 @@ class TodoRequest(BaseModel):
     complete: bool
 
 
+class TodoResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    priority: int
+    complete: bool
+    owner_id: int
+
+
 # sqlachelmy automatically addds id
 
 # depend is dependency injection, we need to do something before we excetue what we want to execute
@@ -44,7 +53,7 @@ async def read_all(user: user_dependency, db: db_dependency):
     return db.query(Todos).filter(Todos.owner_id == user.get('id')).all()
 
 
-@router.get("/todo/{todo_id}", status_code=status.HTTP_200_OK)
+@router.get("/{todo_id}", status_code=status.HTTP_200_OK)
 async def read_todo(user: user_dependency,
                     db: db_dependency, todo_id: int = Path(gt=0)):
     if user is None:
@@ -56,7 +65,7 @@ async def read_todo(user: user_dependency,
     raise HTTPException(status_code=404, detail='todo not found')
 
 
-@router.post("/todo", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=TodoResponse)
 async def create_todo(user: user_dependency,
                       db: db_dependency, todo_request: TodoRequest):
     if user is None:
@@ -65,10 +74,12 @@ async def create_todo(user: user_dependency,
 
     db.add(todo_model)
     db.commit()
+    db.refresh(todo_model)
+    return todo_model
 
 
-@router.put("/todo/{todo_id}",
-            status_code=status.HTTP_204_NO_CONTENT)
+@router.put("/{todo_id}",
+            status_code=status.HTTP_200_OK, response_model=TodoResponse)
 async def update_todo(user: user_dependency,
                       db: db_dependency,
                       todo_request: TodoRequest,
@@ -88,9 +99,11 @@ async def update_todo(user: user_dependency,
 
     db.add(todo_model)
     db.commit()
+    db.refresh(todo_model)
+    return todo_model
 
 
-@router.delete("/todo/{todo_id}",
+@router.delete("/{todo_id}",
                status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(user: user_dependency,
                       db: db_dependency, todo_id: int = Path(gt=0)):
