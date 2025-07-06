@@ -25,6 +25,11 @@ Base.metadata.create_all(bind=engine)
 # nly runs when todo doesnt exist
 
 
+@app.get('/')
+def root():
+    return {'message': 'Todo Hub API is running!'}
+
+
 @app.get('/healthy')
 def health_check():
     return {'status': 'Healthy'}
