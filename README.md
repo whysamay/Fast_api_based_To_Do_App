@@ -185,20 +185,6 @@ npm test
 4. Push to the branch: `git push origin feature-name`
 5. Submit a pull request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- FastAPI community for the excellent framework
-- React team for the powerful frontend library
-- SQLAlchemy for robust database operations
-
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
-
 ---
 
-**Built with ❤️ using FastAPI and React** 
+**Built with FastAPI and React** 
