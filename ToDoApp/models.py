@@ -1,4 +1,9 @@
-from database import Base
+# Try relative import first, fall back to absolute
+try:
+    from .database import Base
+except ImportError:
+    from database import Base
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 
 
