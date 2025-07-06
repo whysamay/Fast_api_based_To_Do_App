@@ -3,13 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from .models import Base
 from .database import engine
 from .routers import auth, todos, admin, users
+import os
 
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React app URL
+    allow_origins=[
+        "http://localhost:3000",  # Development
+        "https://your-frontend-domain.vercel.app",  # Replace with your frontend URL
+        os.getenv("FRONTEND_URL", "http://localhost:3000")  # Environment variable
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
